@@ -9,16 +9,23 @@ namespace cv{
     class Mat
     {
     public:
-        std::vector<std::vector<int>>* ptr;
+        std::vector<std::vector<int>> elem;
         Mat(int m, int n);
         Mat(Mat &);
         ~Mat();
         void clear();
+
+        int at(int y, int x);
     };
 
     Mat::Mat(int m, int n)
     {
-        ptr = new std::vector<std::vector<int>>(m, std::vector<int>(n));
+        elem.resize(m);
+        for (auto it : elem)
+        {
+            it.resize(n);
+        }
+        
     }
 
     Mat::Mat(Mat & newMat)
@@ -35,6 +42,10 @@ namespace cv{
 
     }
 
+    int Mat::at(int y, int x)
+    {
+        return elem[y][x];
+    }
     class Point
     {
     public:

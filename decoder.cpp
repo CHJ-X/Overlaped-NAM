@@ -11,28 +11,8 @@ using namespace cv;
 
 bool checkClear(Mat &R, Point lt, Point rb);
 
-
-Point findNextFlag(Mat &R, Point &curr){
-    //right to left
-    //bottom to top
-}
-
-Point findMatchPoint(Mat &R, Point &curr){
-    // find nearest point whose flag == 1
-
-    // traverse R
-    Point matchPoint;
-    for (;;)
-    {
-        // if find point whose flag == 1
-        matchPoint.set(0, 0);
-        if (checkClear(R, matchPoint, curr))
-        {
-            return matchPoint;
-        }
-        
-    }
-}
+Point findNextFlag(Mat &R, Point &curr);
+Point findMatchPoint(Mat &R, Point &curr);
 
 /*
     input: picture to ouput | left top Point | right bottom Point
@@ -51,4 +31,29 @@ Mat decoder(Mat R){
         drawPic(pic, matchPoint, flagPoint);
     }
     return pic;
+}
+
+
+Point findNextFlag(Mat &R, Point &curr)
+{
+    //right to left
+    //bottom to top
+}
+
+
+Point findMatchPoint(Mat &R, Point &curr){
+    // find nearest point whose flag == 1
+
+    // traverse R
+    Point matchPoint;
+    for (;;)
+    {
+        // if find point whose flag == 1
+        matchPoint.set(0, 0);
+        if (checkClear(R, matchPoint, curr))
+        {
+            return matchPoint;
+        }
+        
+    }
 }
