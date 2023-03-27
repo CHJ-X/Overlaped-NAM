@@ -6,6 +6,5 @@ using namespace cv;
 
 int main()
 {
-    cout << aaa;
     system("pause");
 }

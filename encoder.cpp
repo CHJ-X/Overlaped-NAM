@@ -90,5 +90,4 @@ bool findInit(Mat& pic, Mat& flag, Point &cur)
     }
     std::cout << "END ENCODING" << std::endl;
     return false;
-    
 }

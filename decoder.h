@@ -1,5 +1,5 @@
 #pragma once
-
-#include<iostream>
+#include"cv.h"
 #include"encoder.h"
+
 
