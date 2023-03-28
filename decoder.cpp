@@ -19,10 +19,16 @@ Mat decoder(Mat R){
     Mat pic(PIC_SIZE_X, PIC_SIZE_Y);
     Point flagPoint(PIC_SIZE_X-1, PIC_SIZE_Y-1);
     Point matchPoint;
+
+    // 这里有点小问题
     while(findNextFlag(R, flagPoint)){
         matchPoint = findMatchPoint(R, flagPoint);
         drawPic(pic, matchPoint, flagPoint);
+        std::cout << "pic in decoder" << std::endl;
+        std::cout << pic << std::endl;
         R.at(matchPoint) = 0;
+        std::cout << "R in decoder" << std::endl;
+        std::cout << R << std::endl;
     }
     return pic;
 }
@@ -32,11 +38,7 @@ bool findNextFlag(Mat &R, Point &cur)
 {
     while (cur.x >= 0 && cur.y >= 0)
     {
-        // 图片中为1且为未访问则可以为起始点
-        if(R.at(cur.y, cur.x) == H_MATRIX || R.at(cur.y, cur.x) == V_MATRIX)
-        {
-            return true;
-        }
+        
         // right to left
         cur.x = (cur.x - 1 + PIC_SIZE_X) % PIC_SIZE_X;
         if (cur.x == 0)
@@ -49,7 +51,11 @@ bool findNextFlag(Mat &R, Point &cur)
                 return false;
             }
         }
-        
+        // 图片中为1且为未访问则可以为起始点
+        if (R.at(cur.y, cur.x) == H_MATRIX || R.at(cur.y, cur.x) == V_MATRIX)
+        {
+            return true;
+        }
     }
     std::cout << "END DECODING" << std::endl;
     return false;
@@ -64,9 +70,9 @@ Point findMatchPoint(Mat &R, Point &cur){
         {
             for (int j = cur.x; j >= 0; j--)
             {
-                if (R.at(i, j) == START && checkClear(R, Point(i, j), cur))
+                if (R.at(i, j) == START && checkClear(R, Point(j, i), cur))
                 {
-                    return Point(i, j);
+                    return Point(j, i);
                 }
                 
             }
@@ -78,9 +84,9 @@ Point findMatchPoint(Mat &R, Point &cur){
         {
             for (int j = cur.y; j >= 0; j--)
             {
-                if (R.at(j, i) == START && checkClear(R, Point(j, i), cur))
+                if (R.at(j, i) == START && checkClear(R, Point(i, j), cur))
                 {
-                    return Point(j, i);
+                    return Point(i, j);
                 }
                 
             }
@@ -100,6 +106,10 @@ bool checkClear(Mat &R, Point lt, Point rb)
     {
         for (int j = lt.x; j <= rb.x; j++)
         {
+            if (i == lt.y && j == lt.x || i == rb.y && j == rb.x)
+            {
+                continue;
+            }
             if (R.at(i, j))
             {
                 return false;

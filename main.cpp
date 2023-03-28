@@ -14,5 +14,7 @@ int main()
     cout << pic << endl;
     R = encoder(pic);
     cout << R << endl;
+    pic = decoder(R);
+    cout << pic << endl;
     system("pause");
 }

@@ -46,6 +46,10 @@ Mat encoder(Mat& pic)
     Point initPoint(0, 0);
     // 1. 找一个起始坐标，找不到时即退出循环完成编码
     while (findInit(pic, flag, initPoint)){
+
+        std::cout << "R" << std::endl;
+        std::cout << R << std::endl;
+
         Point targetPoint(initPoint);
         
         // 2. 横向扩展
@@ -68,7 +72,8 @@ Mat encoder(Mat& pic)
 
         // 5. 继续循环找起始点
     }
-
+    std::cout << "flag:" << std::endl;
+    std::cout << flag << std::endl;
     return R;
 }
 
@@ -126,14 +131,14 @@ bool expandY(Mat& pic, Mat& flag, Point& lt, Point& rb)
     do
     {
         rb.y++;
-        std::cout << "RB==y" << rb.y << std::endl;
         if (rb.y >= PIC_SIZE_Y)
         {
             break;
         }
         for (int i = lt.x; i <= rb.x; i++)
         {
-            if (pic.at(i, rb.y) == 1 && flag.at(i, rb.y) != OVERLAPPED)
+            
+            if (pic.at(rb.y, i) == 1 && flag.at(rb.y, i) != OVERLAPPED)
             {
                 //std::cout << "-----------------\n";
                 //std::cout << "pic" << pic.at(rb.y, i) << std::endl;;
@@ -152,10 +157,7 @@ bool expandY(Mat& pic, Mat& flag, Point& lt, Point& rb)
         }
         
     } while (isBlock);
-    std::cout << "rby" << rb.y << std::endl;
     rb.y--;
-
-    std::cout << "here" << std::endl;
     if (rb.y == lt.y)
     {
         return false;
@@ -174,8 +176,9 @@ bool isCrossover(Point& rbH, Point& rbV)
 
 bool checkLaw2(Mat& R, Point& ltV, Point& rbV)
 {
-    if (ltV.x == 0)
+    if (ltV.y == 0)
     {
+        std::cout << "checkLaw2: true" << std::endl;
         return true;
     }
     
@@ -185,16 +188,37 @@ bool checkLaw2(Mat& R, Point& ltV, Point& rbV)
         {
             if (R.at(i, j) == START)
             {
+                std::cout << "checkLaw2: false" << std::endl;
                 return false;
             }
             
         }
     }
+    std::cout << "checkLaw2: true" << std::endl;
     return true;
 }
+Point findLtV(Mat& R, Point p) {
+    std::cout << "p: " << p.x << " " << p.y << std::endl;
+    for (int i = p.y; i >= 0; i--)
+    {
+        std::cout << "R in this:" << std::endl;
+        std::cout << R << std::endl;
+        std::cout << "i: " << i << std::endl;
+        std::cout << R.at(i, p.x) << std::endl;
+        if (R.at(i, p.x) == START)
+        {
+            std::cout << "ltV will return as: " << p.x << " " << i << std::endl;
+            return Point(p.x, i);
+        }
+    }
+    return Point(-1, -1);
 
+};
 bool checkOverlap(Mat& R, std::unordered_map<std::string, Point> &hashmap, Mat& flag, Point& lt, Point& rb)
 {
+    std::cout << "lt: " << lt.x << " " << lt.y << std::endl;
+    std::cout << "rb: " << rb.x << " " << rb.y << std::endl;
+
     if (lt.y == 0)
     {
         // 不重叠
@@ -202,32 +226,31 @@ bool checkOverlap(Mat& R, std::unordered_map<std::string, Point> &hashmap, Mat& 
         R.at(rb) = H_MATRIX;
         hashmap[point2str(lt)] = rb;
         flag.set(lt, rb, VISITED);
+        std::cout << "overlapped: false" << std::endl;
+        std::cout << "position1: lt.y == 0" << std::endl;
         return false;
     }
     bool hasOverlapped = false;
 
-    auto findLtV = [&R] (Point p){
-        for (int i = 0; i < p.y; i++)
-        {
-            if (R.at(i, p.x) == START)
-            {
-                return Point(i, p.x);
-            }
-        }
-        
-    };
+    
 
-    for (int i = lt.x; i <= lt.y; i++)
+    for (int i = lt.x; i <= rb.x; i++)
     {
         if (flag.at(lt.y - 1, i) == VISITED)
         {
-            Point ltV = findLtV(Point(lt.y - 1, i));
+            Point ltV = findLtV(R, Point(i, lt.y - 1));
             Point rbV = hashmap[point2str(ltV)];
+            i = rbV.x + 1;
+            std::cout << "ltV: "<< ltV.x << " " << ltV.y << std::endl;
+            std::cout << "rbV: " << rbV.x << " " << rbV.y << std::endl;
+            std::cout << "position: hasOverlapped == false" << std::endl;
             if (isCrossover(rb, rbV))
             { 
+                std::cout << "isCrossover" << std::endl;
                 if(checkLaw2(R, ltV, rbV) && !hasOverlapped)
                 {
                     // 完全重叠且可以重叠，不用分割
+                    std::cout << "position: hasOverlapped == false" << std::endl;
                     hasOverlapped = true;
                     flag.set(lt, rb, OVERLAPPED);
                     flag.set(ltV, rbV, OVERLAPPED);
@@ -247,6 +270,8 @@ bool checkOverlap(Mat& R, std::unordered_map<std::string, Point> &hashmap, Mat& 
             }
             else if (rbV.y > rb.y)
             {
+                std::cout << "is not Crossover" << std::endl;
+                std::cout << "case 1" << std::endl;
                 // 部分重叠但是上下两段，需要分割两部分
                 Point newRb(lt.y - 1, rbV.x);
                 Point newLt(rb.y + 1, ltV.x);
@@ -257,26 +282,28 @@ bool checkOverlap(Mat& R, std::unordered_map<std::string, Point> &hashmap, Mat& 
             }
             else
             {
+                std::cout << "is not Crossover" << std::endl;
+                std::cout << "case 1" << std::endl;
                 // 部分重叠，修改R矩阵进行分割
                 R.at(rbV) = 0;
                 rbV = Point(lt.y - 1, rbV.x);
                 R.at(rbV) = H_MATRIX;
                 hashmap[point2str(ltV)] = rbV;
             }
+
         }
         
     }
-    
+    R.at(lt) = START;
+    R.at(rb) = H_MATRIX;
+    hashmap[point2str(lt)] = rb;
     if (!hasOverlapped)
     {
-        R.at(lt) = START;
-        R.at(rb) = H_MATRIX;
-        hashmap[point2str(lt)] = rb;
-        std::cout << "R" << R << std::endl;
-        std::cout << rb.x << " " << rb.y<< std::endl;
-        std::cout << lt.x << " " << lt.y << std::endl;
         flag.set(lt, rb, VISITED);
-
+        std::cout << "overlapped: false" << std::endl;
+        std::cout << "position1: hasOverlapped == false" << std::endl;
         return false;
     }
+    std::cout << "overlapped: true" << std::endl;
+    return true;
 }
