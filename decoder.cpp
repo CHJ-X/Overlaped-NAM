@@ -12,15 +12,7 @@ using namespace cv;
 bool checkClear(Mat &R, Point lt, Point rb);
 void drawPic(Mat &pic, Point lt, Point rb);
 bool findNextFlag(Mat &R, Point &cur);
-
-// unfinished
 Point findMatchPoint(Mat &R, Point &cur);
-
-/*
-    input: picture to ouput | left top Point | right bottom Point
-*/
-
-
 
 Mat decoder(Mat R){
 
@@ -30,6 +22,7 @@ Mat decoder(Mat R){
     while(findNextFlag(R, flagPoint)){
         matchPoint = findMatchPoint(R, flagPoint);
         drawPic(pic, matchPoint, flagPoint);
+        R.at(matchPoint) = 0;
     }
     return pic;
 }
@@ -45,7 +38,7 @@ bool findNextFlag(Mat &R, Point &cur)
             return true;
         }
         // right to left
-        cur.x = (cur.x - 1) % PIC_SIZE_Y;
+        cur.x = (cur.x - 1 + PIC_SIZE_X) % PIC_SIZE_X;
         if (cur.x == 0)
         {
             // bottom to top
@@ -62,22 +55,39 @@ bool findNextFlag(Mat &R, Point &cur)
     return false;
 }
 
-
-Point findMatchPoint(Mat &R, Point &curr){
-    // find nearest point whose flag == 1
-
-    // traverse R
-    Point matchPoint;
-    for (;;)
+// unfinished
+Point findMatchPoint(Mat &R, Point &cur){
+    // find nearest point whose flag == START
+    if (R.at(cur) == H_MATRIX)
     {
-        // if find point whose flag == 1
-        matchPoint.set(0, 0);
-        if (checkClear(R, matchPoint, curr))
+        for (int i = cur.y; i >= 0; i--)
         {
-            return matchPoint;
+            for (int j = cur.x; j >= 0; j--)
+            {
+                if (R.at(i, j) == START && checkClear(R, Point(i, j), cur))
+                {
+                    return Point(i, j);
+                }
+                
+            }
         }
-        
     }
+    else if(R.at(cur) == V_MATRIX)
+    {
+        for (int i = cur.x; i >= 0; i--)
+        {
+            for (int j = cur.y; j >= 0; j--)
+            {
+                if (R.at(j, i) == START && checkClear(R, Point(j, i), cur))
+                {
+                    return Point(j, i);
+                }
+                
+            }
+        }
+    }
+    std::cout << "ERROR: Can not find match point" << std::endl;
+    return Point(-1, -1);
 }
 
 bool checkClear(Mat &R, Point lt, Point rb)
@@ -106,14 +116,7 @@ void drawPic(Mat &pic, Point lt, Point rb)
     {
         pic.at(lt) = 1;
     }
-    
-    for (int i = lt.y; i <= rb.y; i++)
-    {
-        for (int j = lt.x; j <= rb.x; j++)
-        {
-            pic.at(i, j) = 1;
-        }
-    }
 
+    pic.set(lt, rb, 1);
     return;
 }

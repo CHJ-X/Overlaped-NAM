@@ -1,6 +1,6 @@
 #pragma once
 #include<vector>
-
+#include<iostream>
 namespace cv{
     class Point
     {
@@ -34,11 +34,25 @@ namespace cv{
     public:
         std::vector<std::vector<int>> elem;
         Mat(int m, int n);
-        Mat(Mat &);
-        ~Mat();
+        // Mat(Mat &);
+        //~Mat();
+        friend std::ostream &operator<<(std::ostream& os, const Mat& m){
+            for (auto its : m.elem)
+            {
+                for (auto it : its)
+                {
+                    os << it << " ";
+                }
+                os << std::endl;
+            }
+            return os;
+        }
         void clear();
 
         int &at(int y, int x);
         int &at(const Point &p);
+
+        void set(const Point &lt, const Point &rb, int value);
+        // int sum(const Point &lt, const Point &rb);
     };
 }
