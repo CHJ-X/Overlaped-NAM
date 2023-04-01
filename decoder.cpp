@@ -16,8 +16,9 @@ Point findMatchPoint(Mat &R, Point &cur);
 
 Mat decoder(Mat R){
 
-    Mat pic(PIC_SIZE_X, PIC_SIZE_Y);
-    Point flagPoint(PIC_SIZE_X-1, PIC_SIZE_Y-1);
+    Mat pic = Mat::zeros(PIC_SIZE_X, PIC_SIZE_Y, CV_8UC1);
+    //使用一个x越界的点作为起始点
+    Point flagPoint(PIC_SIZE_X, PIC_SIZE_Y-1);
     Point matchPoint;
 
     // 这里有点小问题
@@ -26,7 +27,7 @@ Mat decoder(Mat R){
         drawPic(pic, matchPoint, flagPoint);
         std::cout << "pic in decoder" << std::endl;
         std::cout << pic << std::endl;
-        R.at(matchPoint) = 0;
+        R.at<uchar>(matchPoint) = 0;
         std::cout << "R in decoder" << std::endl;
         std::cout << R << std::endl;
     }
@@ -52,7 +53,7 @@ bool findNextFlag(Mat &R, Point &cur)
             }
         }
         // 图片中为1且为未访问则可以为起始点
-        if (R.at(cur.y, cur.x) == H_MATRIX || R.at(cur.y, cur.x) == V_MATRIX)
+        if (R.at<uchar>(cur.y, cur.x) == H_MATRIX || R.at<uchar>(cur.y, cur.x) == V_MATRIX)
         {
             return true;
         }
@@ -64,13 +65,13 @@ bool findNextFlag(Mat &R, Point &cur)
 // unfinished
 Point findMatchPoint(Mat &R, Point &cur){
     // find nearest point whose flag == START
-    if (R.at(cur) == H_MATRIX)
+    if (R.at<uchar>(cur) == H_MATRIX)
     {
         for (int i = cur.y; i >= 0; i--)
         {
             for (int j = cur.x; j >= 0; j--)
             {
-                if (R.at(i, j) == START && checkClear(R, Point(j, i), cur))
+                if (R.at<uchar>(i, j) == START && checkClear(R, Point(j, i), cur))
                 {
                     return Point(j, i);
                 }
@@ -78,13 +79,13 @@ Point findMatchPoint(Mat &R, Point &cur){
             }
         }
     }
-    else if(R.at(cur) == V_MATRIX)
+    else if(R.at<uchar>(cur) == V_MATRIX)
     {
         for (int i = cur.x; i >= 0; i--)
         {
             for (int j = cur.y; j >= 0; j--)
             {
-                if (R.at(j, i) == START && checkClear(R, Point(i, j), cur))
+                if (R.at<uchar>(j, i) == START && checkClear(R, Point(i, j), cur))
                 {
                     return Point(i, j);
                 }
@@ -110,7 +111,7 @@ bool checkClear(Mat &R, Point lt, Point rb)
             {
                 continue;
             }
-            if (R.at(i, j))
+            if (R.at<uchar>(i, j))
             {
                 return false;
             }
@@ -124,9 +125,8 @@ void drawPic(Mat &pic, Point lt, Point rb)
 {
     if (lt == rb)
     {
-        pic.at(lt) = 1;
+        pic.at<uchar>(lt) = 1;
     }
-
-    pic.set(lt, rb, 1);
+    setRectInMat(pic, lt, rb, 1);
     return;
 }

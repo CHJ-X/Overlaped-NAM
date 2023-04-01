@@ -10,12 +10,12 @@ Mat::Mat(int m, int n)
     }
 }
 
-// Mat::Mat(Mat & newMat)
+// Mat::Mat<uchar>(Mat & newMat)
 // {
     
 // }
 
-// Mat::~Mat()
+// Mat::~Mat<uchar>()
 // {
 
 // }
