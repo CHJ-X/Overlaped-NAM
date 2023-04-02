@@ -25,11 +25,14 @@ Mat decoder(Mat R){
     while(findNextFlag(R, flagPoint)){
         matchPoint = findMatchPoint(R, flagPoint);
         drawPic(pic, matchPoint, flagPoint);
-        std::cout << "pic in decoder" << std::endl;
-        std::cout << pic << std::endl;
         R.at<uchar>(matchPoint) = 0;
+#ifdef DEBUG
+        std::cout << "pic in decoder" << std::endl;
+        // std::cout << pic << std::endl;
+
         std::cout << "R in decoder" << std::endl;
-        std::cout << R << std::endl;
+        // std::cout << R << std::endl;
+#endif // DEBUG
     }
     return pic;
 }
@@ -127,6 +130,6 @@ void drawPic(Mat &pic, Point lt, Point rb)
     {
         pic.at<uchar>(lt) = 1;
     }
-    setRectInMat(pic, lt, rb, 1);
+    setRectInMat(pic, lt, rb, WHITE);
     return;
 }

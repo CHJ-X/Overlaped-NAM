@@ -10,16 +10,23 @@ ouput: a R Mat
 #include<string>
 #include"encoder.h"
 using namespace cv;
-
+using cv::Mat;
+using std::cout;
+using std::endl;
+using std::string;
 std::string point2str(const Point& p);
 
+
+std::unordered_map<std::string, Point> hashmap;
 
 /* 
 input: a 64*64 picture | current search position
 output: a init point whose flag == START
 */
 //寻找初始点
-bool findInit(Mat &pic, Mat &flag, Point &cur);
+bool isWhite(Mat& pic, Point p);
+
+bool findInit(Mat& pic, Mat& flag, Point& cur);
 bool expandX(Mat& pic, Mat& flag, Point& lt, Point& rb);
 bool expandY(Mat& pic, Mat& flag, Point& lt, Point& rb);
 
@@ -34,12 +41,16 @@ bool checkLaw2(Mat& R, Point& ltV, Point& rbV);
 bool checkOverlap(Mat& R, std::unordered_map<std::string, Point> &hashmap, Mat& flag, Point& lt, Point& rb);
 
 /**/
+// 打印矩形
+void showRec(string name, Mat& m, Point lt, Point rb);
 
 
+// 在R矩阵中画一个矩形
+void drawR(Mat& R, Point lt, Point rb, int value);
 
 Mat encoder(Mat& pic)
 {
-    std::unordered_map<std::string, Point> hashmap;
+    
     Mat R = Mat::zeros(PIC_SIZE_X, PIC_SIZE_Y, CV_8UC1);
     Mat flag = Mat::zeros(PIC_SIZE_X, PIC_SIZE_Y, CV_8UC1);
 
@@ -48,8 +59,8 @@ Mat encoder(Mat& pic)
     while (findInit(pic, flag, initPoint)){
 
 #ifdef DEBUG
-        std::cout << "R" << std::endl;
-        std::cout << R << std::endl;
+        // std::cout << "R" << std::endl;
+        // std::cout << R << std::endl;
 #endif
         Point targetPoint(initPoint);
         
@@ -60,11 +71,11 @@ Mat encoder(Mat& pic)
         // 孤立点检测
         if (targetPoint == initPoint)
         {
+
             R.at<uchar>(initPoint) = ISOLATED;
+            setRectInMat(flag, initPoint, targetPoint, VISITED);
             continue;
         }
-        
-
         // 3. 纵向扩展
         expandY(pic, flag, initPoint, targetPoint);
 
@@ -75,10 +86,11 @@ Mat encoder(Mat& pic)
     }
 
 #ifdef DEBUG
-    std::cout << "flag:" << std::endl;
-    std::cout << flag << std::endl;
+    // std::cout << "flag:" << std::endl;
+    // std::cout << flag << std::endl;
 #endif
-    
+
+    std::cout << "subschema count: " << hashmap.size() << std::endl;
     return R;
 }
 
@@ -88,12 +100,17 @@ std::string point2str(const Point& p)
      return std::to_string(p.x) + " " + std::to_string(p.y);
 }
 
+bool isWhite(Mat& m, Point p)
+{
+    return m.at<uchar>(p) == WHITE;
+}
+
 bool findInit(Mat& pic, Mat& flag, Point &cur)
 {
     while (cur.x < PIC_SIZE_X && cur.y < PIC_SIZE_Y)
     {
         // 图片中为1且为未访问则可以为起始点
-        if(pic.at<uchar>(cur.y, cur.x) == START && flag.at<uchar>(cur.y, cur.x) == UNVISITED)
+        if(isWhite(pic, cur) && flag.at<uchar>(cur) == UNVISITED)
         {
             return true;
         }
@@ -119,8 +136,15 @@ bool expandX(Mat& pic, Mat& flag, Point& lt, Point& rb)
 {
     do
     {
+#ifdef DEBUG
+        cout << "In expandX" << endl;
+#endif // DEBUG
+
         rb.x++;
-    } while (rb.x < PIC_SIZE_Y &&  pic.at<uchar>(rb) == 1 && flag.at<uchar>(rb) != OVERLAPPED);
+    } while (rb.x < PIC_SIZE_Y &&  isWhite(pic, rb) && flag.at<uchar>(rb) != OVERLAPPED); 
+#ifdef DEBUG
+        cout << "end loop" << endl;
+#endif // DEBUG
     rb.x--;
     if (lt.x == rb.x)
     {
@@ -143,18 +167,12 @@ bool expandY(Mat& pic, Mat& flag, Point& lt, Point& rb)
         for (int i = lt.x; i <= rb.x; i++)
         {
             
-            if (pic.at<uchar>(rb.y, i) == 1 && flag.at<uchar>(rb.y, i) != OVERLAPPED)
+            if (isWhite(pic, Point(i, rb.y)) && flag.at<uchar>(rb.y, i) != OVERLAPPED)
             {
-                //std::cout << "-----------------\n";
-                //std::cout << "pic" << pic.at<uchar>(rb.y, i) << std::endl;;
-                //std::cout << "-----------------\n";
                 continue;
             }
             else
             {
-
-                ////std::cout << "bug!!!!!!" << std::endl;
-                ////std::cout << pic.at<uchar>(rb) << std::endl;
                 isBlock = false;
                 break;
             }
@@ -221,10 +239,10 @@ Point findLtV(Mat& R, Point p) {
     for (int i = p.y; i >= 0; i--)
     {
 #ifdef DEBUG
-        std::cout << "R in this:" << std::endl;
-        std::cout << R << std::endl;
+        // std::cout << "R in this:" << std::endl;
+        // std::cout << R << std::endl;
         std::cout << "i: " << i << std::endl;
-        std::cout << R.at<uchar>(i, p.x) << std::endl;
+        std::cout << "R.at<uchar>(i, p.x):" << int(R.at<uchar>(i, p.x)) << std::endl;
 #endif // DEBUG
 
         
@@ -256,8 +274,12 @@ bool checkOverlap(Mat& R, std::unordered_map<std::string, Point> &hashmap, Mat& 
         hashmap[point2str(lt)] = rb;
         setRectInMat(flag, lt, rb, VISITED);
 #ifdef DEBUG
+        showRec("flag", flag, Point(42, 0), Point(50, 2));
+#endif // DEBUG
+
+#ifdef DEBUG
         std::cout << "overlapped: false" << std::endl;
-        std::cout << "position1: lt.y == 0" << std::endl;
+        std::cout << "position1: lt.y" << std::endl;
 #endif // DEBUG
 
         return false;
@@ -268,15 +290,19 @@ bool checkOverlap(Mat& R, std::unordered_map<std::string, Point> &hashmap, Mat& 
 
     for (int i = lt.x; i <= rb.x; i++)
     {
-        if (flag.at<uchar>(lt.y - 1, i) == VISITED)
+        
+        if (flag.at<uchar>(lt.y, i) == VISITED)
         {
-            Point ltV = findLtV(R, Point(i, lt.y - 1));
+#ifdef DEBUG
+            showRec("flag", flag, Point(40, 3), Point(60, 8));
+            showRec("R", R, Point(40, 3), Point(60, 8));
+#endif // DEBUG
+            Point ltV = findLtV(R, Point(i, lt.y));
             Point rbV = hashmap[point2str(ltV)];
-            i = rbV.x + 1;
+            i = rbV.x;
 #ifdef DEBUG
             std::cout << "ltV: " << ltV.x << " " << ltV.y << std::endl;
             std::cout << "rbV: " << rbV.x << " " << rbV.y << std::endl;
-            std::cout << "position: hasOverlapped == false" << std::endl;
 #endif // DEBUG
             if (isCrossover(rb, rbV))
             { 
@@ -289,10 +315,10 @@ bool checkOverlap(Mat& R, std::unordered_map<std::string, Point> &hashmap, Mat& 
                 {
                     // 完全重叠且可以重叠，不用分割
 #ifdef DEBUG
-                    std::cout << "position: hasOverlapped == false" << std::endl;
+                    std::cout << "position: hasOverlapped == true" << std::endl;
 #endif // DEBUG
                     hasOverlapped = true;
-                    setRectInMat(flag, lt, rb, OVERLAPPED);
+                    
                     setRectInMat(flag, ltV, rbV, OVERLAPPED);
                     R.at<uchar>(rbV) = V_MATRIX;
                 }
@@ -322,12 +348,17 @@ bool checkOverlap(Mat& R, std::unordered_map<std::string, Point> &hashmap, Mat& 
                 R.at<uchar>(newLt) = START;
                 hashmap[point2str(ltV)] = newRb;
                 hashmap[point2str(newLt)] = rbV;
+
+#ifdef DEBUG
+                showRec("flag", flag, Point(40, 3), Point(60, 8));
+                showRec("R", R, Point(40, 3), Point(60, 8));
+#endif // DEBUG
             }
             else
             {
 #ifdef DEBUG
                 std::cout << "is not Crossover" << std::endl;
-                std::cout << "case 1" << std::endl;
+                std::cout << "case 2" << std::endl;
 #endif // DEBUG
                 // 部分重叠，修改R矩阵进行分割
                 R.at<uchar>(rbV) = 0;
@@ -353,10 +384,32 @@ bool checkOverlap(Mat& R, std::unordered_map<std::string, Point> &hashmap, Mat& 
         
         return false;
     }
+    setRectInMat(flag, lt, rb, OVERLAPPED);
 #ifdef DEBUG
     std::cout << "overlapped: true" << std::endl;
 #endif // DEBUG
     return true;
+}
+
+void showRec(string name, Mat& m, Point lt, Point rb)
+{
+    cout << name << ": " << endl;
+    cout << "range: " << lt << " to " << rb << endl;
+    Mat Roi = m(Rect(lt, rb));
+    return;
+}
+
+void drawR(Mat& R, Point lt, Point rb, int value)
+{
+    rb.x++;
+    rb.y++;
+    Mat roi = R(Rect(lt, rb));
+    roi.setTo(0);
+    R.at<uchar>(lt) = START;
+    rb.x--;
+    rb.y--;
+    R.at<uchar>(rb) = value;
+    hashmap[point2str(lt)] = rb;
 }
 
 
