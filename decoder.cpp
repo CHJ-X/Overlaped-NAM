@@ -6,36 +6,33 @@ input: a R Mat
 ouput: a 64*64 picture
 
 */
-#include "decoder.h"
+#include "encoder.h"
 using namespace cv;
-
+int cols = 256, rows = 256;
 bool checkClear(Mat &R, Point lt, Point rb);
 void drawPic(Mat &pic, Point lt, Point rb);
 bool findNextFlag(Mat &R, Point &cur);
 Point findMatchPoint(Mat &R, Point &cur);
 
-Mat decoder(Mat R){
+Mat Codec::decode(Mat& R)
+{
 
-    Mat pic = Mat::zeros(PIC_SIZE_X, PIC_SIZE_Y, CV_8UC1);
+    Mat newPic = Mat::zeros(this->cols, rows, CV_8UC1);
     //使用一个x越界的点作为起始点
-    Point flagPoint(PIC_SIZE_X, PIC_SIZE_Y-1);
+    Point flagPoint(cols, rows - 1);
     Point matchPoint;
 
-    // 这里有点小问题
-    while(findNextFlag(R, flagPoint)){
+    while (findNextFlag(R, flagPoint)) {
         matchPoint = findMatchPoint(R, flagPoint);
-        drawPic(pic, matchPoint, flagPoint);
+        drawPic(newPic, matchPoint, flagPoint);
         R.at<uchar>(matchPoint) = 0;
-#ifdef DEBUG
-        std::cout << "pic in decoder" << std::endl;
-        // std::cout << pic << std::endl;
-
-        std::cout << "R in decoder" << std::endl;
-        // std::cout << R << std::endl;
-#endif // DEBUG
     }
-    return pic;
+    std::cout << "END DECODING" << std:: endl;
+    return newPic;
 }
+
+
+
 
 
 bool findNextFlag(Mat &R, Point &cur)
@@ -44,7 +41,7 @@ bool findNextFlag(Mat &R, Point &cur)
     {
         
         // right to left
-        cur.x = (cur.x - 1 + PIC_SIZE_X) % PIC_SIZE_X;
+        cur.x = (cur.x - 1 + cols) % cols;
         if (cur.x == 0)
         {
             // bottom to top
@@ -126,10 +123,9 @@ bool checkClear(Mat &R, Point lt, Point rb)
 
 void drawPic(Mat &pic, Point lt, Point rb)
 {
-    if (lt == rb)
-    {
-        pic.at<uchar>(lt) = 1;
-    }
-    setRectInMat(pic, lt, rb, WHITE);
+    rb.x++;
+    rb.y++;
+    Mat roi = pic(Rect(lt, rb));
+    roi.setTo(WHITE);
     return;
 }
