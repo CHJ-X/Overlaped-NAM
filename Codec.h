@@ -7,7 +7,7 @@
 #include<vector>
 #include<unordered_map>
 
-#define DEBUG
+//#define DEBUG
 #ifdef DEBUG
 #define DEBUG_COUT std::cout << "DEBUG:"
 #else
@@ -23,7 +23,7 @@
 #endif // DEBUG
 
 
-#define WHITE 255
+// #define WHITE 255
 
 using cv::Mat;
 using cv::Point;
@@ -32,7 +32,7 @@ using std::string;
 using std::vector;
 
 
-enum NODE_TYPE
+enum NODE_TYPE:uchar
 {
     ISOLATED = 4,
     START = 1,
@@ -40,7 +40,7 @@ enum NODE_TYPE
     V_MATRIX = 3
 };
 
-enum FLAG_TYPE
+enum FLAG_TYPE :uchar
 {
     UNVISITED = 0,
     VISITED = 1,
@@ -55,20 +55,39 @@ public:
     Codec();
     Codec(Mat& pic);
     ~Codec();
+
+
+public:
+    /*
+    * public methods
+    * 
+    * 
+    */
     Mat encode();
-    
     Mat decode(Mat& R);
 
 public:
     Mat pic;
     Mat R;
+    int blockCount;
+
+    /* 
+    * Rect area include top left Point --> Rect::tl(),
+    * but not include bottom right Point --> Rect::br()
+    */
+    std::vector<Rect> overlapArea;
+
+private:
     Mat flag;
     std::unordered_map<std::string, Point> hashmap;
     std::vector<Rect> overlapRect;
     Point lt;
     Point rb;
     Rect rec;
-    int blockCount;
+    int cols;
+    int rows;
+
+    const static uchar WHITE = 255;
 private:
     /*
     private methods
@@ -83,36 +102,34 @@ private:
 
     vector<Rect> findOverlapRects();
     void handleNoOverlap();
-
     void handleOverlapRects(vector<Rect> overlapRects);
     Rect findRectV(int x, int y);
     bool checkLaw2(Rect RectV);
     void divideRectV(Rect RectV);
     bool isCrossOverlap(Rect RectH, Rect RectV);
+    
+    void saveOverlapArea(Rect RectH, Rect RectV);
 private:
     /*util methods*/
     std::string point2str(const Point& p);
     bool isWhite(Point p);
-    void setFlag(Rect rec, int value);
-    void setR(Rect rec, int value);
+    void setFlag(Rect rec, FLAG_TYPE flagValue);
+    void setR(Rect rec, NODE_TYPE nodeValue);
     bool isOutOfRange(const Point& p);
+
+    int count();
 
 private:
     bool isIsolated(const Point& lt, const Point& rb);
     void handleIsolated();
 
 private:
-    int cols;
-    int rows;
+    /*
+    * private methods
+    * for decode;
+    */
+    bool checkClear(Mat& R, Point lt, Point rb);
+    void drawPic(Mat& pic, Point lt, Point rb);
+    bool findNextFlag(Mat& R, Point& cur);
+    Point findMatchPoint(Mat& R, Point& cur);
 };
-
-
-
-/**/
-// 打印矩形
-void showRec(string name, Mat& m, Point lt, Point rb);
-
-
-// 在R矩阵中画一个矩形
-void drawR(Mat& R, Point lt, Point rb, int value);
-cv::Mat encoder(cv::Mat& pic);

@@ -6,18 +6,13 @@ input: a R Mat
 ouput: a 64*64 picture
 
 */
-#include "encoder.h"
+#include"Codec.h"
 using namespace cv;
-int cols = 256, rows = 256;
-bool checkClear(Mat &R, Point lt, Point rb);
-void drawPic(Mat &pic, Point lt, Point rb);
-bool findNextFlag(Mat &R, Point &cur);
-Point findMatchPoint(Mat &R, Point &cur);
 
 Mat Codec::decode(Mat& R)
 {
 
-    Mat newPic = Mat::zeros(this->cols, rows, CV_8UC1);
+    Mat newPic = Mat::zeros(this->rows, this->cols, CV_8UC1);
     //使用一个x越界的点作为起始点
     Point flagPoint(cols, rows - 1);
     Point matchPoint;
@@ -27,7 +22,7 @@ Mat Codec::decode(Mat& R)
         drawPic(newPic, matchPoint, flagPoint);
         R.at<uchar>(matchPoint) = 0;
     }
-    std::cout << "END DECODING" << std:: endl;
+    std::cout << "END DECODING" << std::endl;
     return newPic;
 }
 
@@ -35,7 +30,7 @@ Mat Codec::decode(Mat& R)
 
 
 
-bool findNextFlag(Mat &R, Point &cur)
+bool Codec::findNextFlag(Mat &R, Point &cur)
 {
     while (cur.x >= 0 && cur.y >= 0)
     {
@@ -48,30 +43,34 @@ bool findNextFlag(Mat &R, Point &cur)
             cur.y = cur.y - 1;
             if (cur.y < 0)
             {
-                std::cout << "END DECODING" << std::endl;
                 return false;
             }
         }
         // 图片中为1且为未访问则可以为起始点
-        if (R.at<uchar>(cur.y, cur.x) == H_MATRIX || R.at<uchar>(cur.y, cur.x) == V_MATRIX)
+        if (R.at<uchar>(cur.y, cur.x) == NODE_TYPE::H_MATRIX || 
+            R.at<uchar>(cur.y, cur.x) == NODE_TYPE::V_MATRIX ||
+            R.at<uchar>(cur.y, cur.x) == NODE_TYPE::ISOLATED)
         {
             return true;
         }
     }
-    std::cout << "END DECODING" << std::endl;
     return false;
 }
 
 // unfinished
-Point findMatchPoint(Mat &R, Point &cur){
+Point Codec::findMatchPoint(Mat &R, Point &cur){
+    if (R.at<uchar>(cur) == NODE_TYPE::ISOLATED)
+    {
+        return cur;
+    }
     // find nearest point whose flag == START
-    if (R.at<uchar>(cur) == H_MATRIX)
+    if (R.at<uchar>(cur) == NODE_TYPE::H_MATRIX)
     {
         for (int i = cur.y; i >= 0; i--)
         {
             for (int j = cur.x; j >= 0; j--)
             {
-                if (R.at<uchar>(i, j) == START && checkClear(R, Point(j, i), cur))
+                if (R.at<uchar>(i, j) == NODE_TYPE::START && checkClear(R, Point(j, i), cur))
                 {
                     return Point(j, i);
                 }
@@ -79,13 +78,13 @@ Point findMatchPoint(Mat &R, Point &cur){
             }
         }
     }
-    else if(R.at<uchar>(cur) == V_MATRIX)
+    else if(R.at<uchar>(cur) == NODE_TYPE::V_MATRIX)
     {
         for (int i = cur.x; i >= 0; i--)
         {
             for (int j = cur.y; j >= 0; j--)
             {
-                if (R.at<uchar>(j, i) == START && checkClear(R, Point(i, j), cur))
+                if (R.at<uchar>(j, i) == NODE_TYPE::START && checkClear(R, Point(i, j), cur))
                 {
                     return Point(i, j);
                 }
@@ -97,7 +96,7 @@ Point findMatchPoint(Mat &R, Point &cur){
     return Point(-1, -1);
 }
 
-bool checkClear(Mat &R, Point lt, Point rb)
+bool Codec::checkClear(Mat &R, Point lt, Point rb)
 {
     if (lt == rb)
     {
@@ -115,13 +114,12 @@ bool checkClear(Mat &R, Point lt, Point rb)
             {
                 return false;
             }
-            
         }
     }
     return true;
 }
 
-void drawPic(Mat &pic, Point lt, Point rb)
+void Codec::drawPic(Mat &pic, Point lt, Point rb)
 {
     rb.x++;
     rb.y++;

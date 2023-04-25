@@ -1,4 +1,4 @@
-#include"encoder.h"
+#include"Codec.h"
 using namespace cv;
 using cv::Mat;
 using cv::Point;
@@ -23,7 +23,7 @@ Codec::Codec(Mat& pic)
     this->rows = pic.rows;
     this->R = Mat::zeros(rows, cols, CV_8UC1);
     this->flag = Mat::zeros(rows, cols, CV_8UC1);
-    
+    this->blockCount = 0;
 }
 
 Codec::~Codec()
@@ -33,13 +33,14 @@ Codec::~Codec()
 Mat Codec::encode()
 {
     Point& cur = this->lt;
+    int isolatedCount = 0;
     while (findInitPoint(cur))
     {
-        blockCount++;
         expandX();
         if (isIsolated(this->lt, this->rb))
         {
             handleIsolated();
+            isolatedCount++;
             continue;
         }
         expandY();
@@ -53,6 +54,9 @@ Mat Codec::encode()
             handleOverlapRects(overlapRects);
         }
     }
+    cout << "now isolatedCount is" << isolatedCount << endl;
+    blockCount = count();
+    // this->blockCount += this->hashmap.size();
     return R;
 }
 
@@ -63,7 +67,7 @@ bool Codec::findInitPoint(Point& cur)
     while (!isOutOfRange(cur))
     {
         // 图片中为1且为未访问则可以为起始点
-        if (isWhite(cur) && flag.at<uchar>(cur) == UNVISITED)
+        if (isWhite(cur) && flag.at<uchar>(cur) == FLAG_TYPE::UNVISITED)
         {
             DEBUG_COUT << "Found an initPoint: " << cur << endl;
             return true;
@@ -92,7 +96,7 @@ void Codec::expandX()
     do
     {
         this->rb.x++;
-    } while (!isOutOfRange(rb) && isWhite(rb) && flag.at<uchar>(rb) != OVERLAPPED);
+    } while (!isOutOfRange(rb) && isWhite(rb) && flag.at<uchar>(rb) != FLAG_TYPE::OVERLAPPED);
 
     DEBUG_COUT << "end expandX loop" << endl;
     rb.x--;
@@ -116,7 +120,7 @@ void Codec::expandY()
         }
         for (int i = lt.x; i <= rb.x; i++)
         {
-            if (isWhite(Point(i, rb.y)) && flag.at<uchar>(rb.y, i) != OVERLAPPED)
+            if (isWhite(Point(i, rb.y)) && flag.at<uchar>(rb.y, i) != FLAG_TYPE::OVERLAPPED)
             {
                 continue;
             }
@@ -153,7 +157,7 @@ vector<Rect> Codec::findOverlapRects()
 
     for (int i = lt.x; i <= rb.x; i++)
     {
-        if (flag.at<uchar>(lt.y, i) == VISITED)
+        if (flag.at<uchar>(lt.y, i) == FLAG_TYPE::VISITED)
         {
             Rect RectV = findRectV(i, lt.y);
             overlapRects.push_back(RectV);
@@ -168,8 +172,8 @@ void Codec::handleNoOverlap()
 {
     DEBUG_COUT_INFO;
 
-    setFlag(this->rec, VISITED);
-    setR(this->rec, H_MATRIX);
+    setFlag(this->rec, FLAG_TYPE::VISITED);
+    setR(this->rec, NODE_TYPE::H_MATRIX);
 
     return;
 }
@@ -182,11 +186,14 @@ void Codec::handleOverlapRects(vector<Rect> overlapRects)
 
     for (auto RectV : overlapRects)
     {
+        /*if (!isCross && isCrossOverlap(this->rec, RectV) && checkLaw2(RectV))*/
         if (!isCross && isCrossOverlap(this->rec, RectV) && checkLaw2(RectV))
         {
             isCross = true;
-            setFlag(RectV, OVERLAPPED);
-            setR(RectV, V_MATRIX);
+            setFlag(RectV, FLAG_TYPE::OVERLAPPED);
+            setR(RectV, NODE_TYPE::V_MATRIX);
+
+            saveOverlapArea(this->rec, RectV);
         }
         else
         {
@@ -196,8 +203,8 @@ void Codec::handleOverlapRects(vector<Rect> overlapRects)
 
     if (isCross)
     {
-        setFlag(this->rec, OVERLAPPED);
-        setR(this->rec, H_MATRIX);
+        setFlag(this->rec, FLAG_TYPE::OVERLAPPED);
+        setR(this->rec, NODE_TYPE::H_MATRIX);
     }
     else
     {
@@ -212,7 +219,7 @@ Rect Codec::findRectV(int x, int y)
     {
         DEBUG_COUT << "now we're finding from (x, y): " << x << ", " << i << endl;
         DEBUG_COUT << "R.at<uchar>(i, x) : " << int(R.at<uchar>(i, x)) << endl;
-        if (R.at<uchar>(i, x) == START) 
+        if (R.at<uchar>(i, x) == NODE_TYPE::START)
         {
             Point ltV(x, i);
             if (hashmap.find(point2str(ltV)) == hashmap.end())
@@ -244,7 +251,7 @@ bool Codec::checkLaw2(Rect RectV)
     {
         for (int j = RectV.tl().x; j < RectV.br().x; j++)
         {
-            if (R.at<uchar>(i, j) == START)
+            if (R.at<uchar>(i, j) == NODE_TYPE::START)
             {
                 DEBUG_COUT << "checkLaw2: false" << endl;
                 return false;
@@ -267,7 +274,7 @@ void Codec::divideRectV(Rect RectV)
         tempBr.y = this->rec.tl().y;
 
         Rect newRectV(RectV.tl(), tempBr);
-        setR(newRectV, H_MATRIX);
+        setR(newRectV, NODE_TYPE::H_MATRIX);
     }
 
     //下面突出
@@ -277,9 +284,8 @@ void Codec::divideRectV(Rect RectV)
         tempTl.y = this->rec.br().y;
         Point tempBr = RectV.br();
         Rect newRectV(tempTl, tempBr);
-        setR(newRectV, H_MATRIX);
+        setR(newRectV, NODE_TYPE::H_MATRIX);
     }
-
 }
 
 bool Codec::isCrossOverlap(Rect RectH, Rect RectV)
@@ -292,6 +298,14 @@ bool Codec::isCrossOverlap(Rect RectH, Rect RectV)
     return false;
 }
 
+void Codec::saveOverlapArea(Rect RectH, Rect RectV)
+{
+    Point newTl(RectV.tl().x, RectH.tl().y);
+    Point newBr(RectV.br().x, RectV.br().y);
+    this->overlapArea.push_back(Rect(newTl, newBr));
+    return;
+}
+
 std::string Codec::point2str(const Point& p)
 {
     return std::to_string(p.x) + " " + std::to_string(p.y);
@@ -302,21 +316,21 @@ bool Codec::isWhite(Point p)
     return pic.at<uchar>(p) == WHITE;
 }
 
-void Codec::setFlag(Rect rec, int value)
+void Codec::setFlag(Rect rec, FLAG_TYPE flagValue)
 {
-    this->flag(rec).setTo(value);
+    this->flag(rec).setTo(static_cast<uchar>(flagValue));
     return;
 }
 
-void Codec::setR(Rect rec, int value)
+void Codec::setR(Rect rec, NODE_TYPE nodeValue)
 {
     Mat roi = R(rec);
     roi.setTo(0);
-    this->R.at<uchar>(rec.tl()) = START;
+    this->R.at<uchar>(rec.tl()) = NODE_TYPE::START;
     Point tempBr = rec.br();
     tempBr.x--;
     tempBr.y--;
-    this->R.at<uchar>(tempBr) = value;
+    this->R.at<uchar>(tempBr) = nodeValue;
     DEBUG_COUT << "---------------------------------------" << endl;
     DEBUG_COUT << "now we're setting R, lt: " << rec.tl() << "rb++: " << rec.br() << endl;
 
@@ -329,6 +343,23 @@ bool Codec::isOutOfRange(const Point& p)
     return (p.x >= cols || p.y >= rows);
 }
 
+int Codec::count()
+{
+    int res = 0;
+    for (int i = 0; i < R.rows; i++)
+    {
+        for (int j = 0; j < R.cols; j++)
+        {
+            if (R.at<uchar>(i, j) == ISOLATED || R.at<uchar>(i, j) == START)
+            {
+                res++;
+            }
+        }
+    }
+
+    return res;
+}
+
 bool Codec::isIsolated(const Point& lt, const Point& rb)
 {
     return lt == rb;
@@ -337,11 +368,7 @@ bool Codec::isIsolated(const Point& lt, const Point& rb)
 void Codec::handleIsolated()
 {
     DEBUG_COUT << "In handleIsolated" << endl;
-    R.at<uchar>(this->lt) = ISOLATED;
-    flag.at<uchar>(this->lt) = VISITED;
+    R.at<uchar>(this->lt) = NODE_TYPE::ISOLATED;
+    flag.at<uchar>(this->lt) = FLAG_TYPE::VISITED;
     return;
 }
-
-
-
-
