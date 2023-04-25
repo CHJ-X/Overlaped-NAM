@@ -33,14 +33,14 @@ Codec::~Codec()
 Mat Codec::encode()
 {
     Point& cur = this->lt;
-    int isolatedCount = 0;
+    
     while (findInitPoint(cur))
     {
         expandX();
         if (isIsolated(this->lt, this->rb))
         {
             handleIsolated();
-            isolatedCount++;
+            
             continue;
         }
         expandY();
@@ -48,18 +48,18 @@ Mat Codec::encode()
         if (overlapRects.empty())
         {
             handleNoOverlap();
+            
         }
         else
         {
             handleOverlapRects(overlapRects);
         }
     }
-    cout << "now isolatedCount is" << isolatedCount << endl;
-    blockCount = count();
-    // this->blockCount += this->hashmap.size();
+    
+    this->blockCount = count();
+    
     return R;
 }
-
 
 
 bool Codec::findInitPoint(Point& cur)
@@ -93,10 +93,27 @@ void Codec::expandX()
 {
     DEBUG_COUT << "In expandX" << endl;
     this->rb = this->lt;
+
+    // this->isOverlaped = false;
+
     do
     {
         this->rb.x++;
+        /*if (flag.at<uchar>(rb) == FLAG_TYPE::VISITED && this->isOverlaped)
+        {
+            break;
+        }
+        if (flag.at<uchar>(rb) == FLAG_TYPE::VISITED && this->isOverlaped == false)
+        {
+            this->isOverlaped = true;
+            this->RectV = findRectV(rb.x, lt.y);
+            rb.x = this->RectV.br().x - 1;
+        }*/
+        
+
     } while (!isOutOfRange(rb) && isWhite(rb) && flag.at<uchar>(rb) != FLAG_TYPE::OVERLAPPED);
+
+
 
     DEBUG_COUT << "end expandX loop" << endl;
     rb.x--;
@@ -151,7 +168,7 @@ vector<Rect> Codec::findOverlapRects()
     {
         DEBUG_COUT << "can't find overlap rect" << endl;
         return vector<Rect>();
-    }
+    } 
 
     vector<Rect> overlapRects;
 
@@ -212,6 +229,38 @@ void Codec::handleOverlapRects(vector<Rect> overlapRects)
     }
 }
 
+//void Codec::handleOverlapRects(Rect RectV)
+//{
+//    // 判断是否已经完全重叠
+//
+//    bool isCross = false;
+//
+//    if (isCrossOverlap(this->rec, RectV) && checkLaw2(RectV))
+//    {
+//        isCross = true;
+//        cout << "here" << endl;
+//        setFlag(RectV, FLAG_TYPE::OVERLAPPED);
+//        setR(RectV, NODE_TYPE::V_MATRIX);
+//        saveOverlapArea(this->rec, RectV);
+//    }
+//    else
+//    {
+//        divideRectV(RectV);
+//        expandY();
+//    }
+//    
+//
+//    if (isCross)
+//    {
+//        setFlag(this->rec, FLAG_TYPE::OVERLAPPED);
+//        setR(this->rec, NODE_TYPE::H_MATRIX);
+//    }
+//    else
+//    {
+//        handleNoOverlap();
+//    }
+//}
+
 Rect Codec::findRectV(int x, int y)
 {
     DEBUG_COUT << "now we're finding from (x, y): " << x << ", " << y << endl;
@@ -266,8 +315,15 @@ bool Codec::checkLaw2(Rect RectV)
 void Codec::divideRectV(Rect RectV)
 {
     DEBUG_COUT_INFO;
-    // 上面突出
 
+    //Point tempBr = this->rec.br();
+    //tempBr.x = RectV.tl().x;
+    //this->rb = tempBr;
+    //this->rec = Rect(this->rec.tl(), tempBr);
+    //return;
+
+
+    // 上面突出
     if (RectV.tl().y < this->rec.tl().y)
     {
         Point tempBr = RectV.br();

@@ -57,7 +57,7 @@ bool Codec::findNextFlag(Mat &R, Point &cur)
     return false;
 }
 
-// unfinished
+//
 Point Codec::findMatchPoint(Mat &R, Point &cur){
     if (R.at<uchar>(cur) == NODE_TYPE::ISOLATED)
     {

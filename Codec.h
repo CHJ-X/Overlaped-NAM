@@ -118,7 +118,6 @@ private:
     bool isOutOfRange(const Point& p);
 
     int count();
-
 private:
     bool isIsolated(const Point& lt, const Point& rb);
     void handleIsolated();

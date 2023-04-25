@@ -24,18 +24,25 @@ void test02()
 	Mat R = codec.encode();
 
 	int count = 0;
+	int count_hv = 0;
 	for (int i = 0; i < R.rows; i++)
 	{
 		for (int j = 0; j < R.cols; j++)
 		{
-			if (R.at<uchar>(i, j) == ISOLATED || R.at<uchar>(i, j) == START)
+			if ( R.at<uchar>(i, j) == START)
 			{
 				count++;
+			}
+			if (R.at<uchar>(i, j) == H_MATRIX || R.at<uchar>(i, j) == V_MATRIX)
+			{
+				count_hv++;
 			}
 		}
 	}
 
 	cout << "count:" << count << endl;
+	cout << "counthv:" << count_hv << endl;
+
 	cout << "overlapped count: " << codec.overlapArea.size() << endl;
 	cout << "blockCount: " << codec.blockCount << endl;
 	Mat newPic = codec.decode(R);
@@ -111,7 +118,7 @@ void test05()
 int main()
 {
 	// test01();
-	//test02();
-	test05();
+	test02();
+	// test05();
 	//test04();
 }
